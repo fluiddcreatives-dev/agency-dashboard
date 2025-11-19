@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agency Dashboard</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { Home, Users, DollarSign, TrendingUp, Settings } = lucide;
+
+    // Simple localStorage wrapper for storage
+    const storage = {
+      get: (key) => {
+        return new Promise((resolve) => {
+          const value = localStorage.getItem(key);
+          resolve(value ? { value } : null);
+        });
+      },
+      set: (key, value) => {
+        return new Promise((resolve) => {
+          localStorage.setItem(key, value);
+          resolve({ key, value });
+        });
+      }
+    };
+
+    window.storage = storage;
+
+    const AgencyDashboard = () => {
+      const [currentPage, setCurrentPage] = useState('home');
+      const [clients, setClients] = useState([]);
+      const [stripeApiKey, setStripeApiKey] = useState('');
+      const [stripeConnected, setStripeConnected] = useState(false);
+      const [showStripeModal, setShowStripeModal] = useState(false);
+      const [showAddClient, setShowAddClient] = useState(false);
+      const [loading, setLoading] = useState(false);
+      const [lastSync, setLastSync] = useState(null);
+      const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+      const [newClient, setNewClient] = useState({
+        name: '',
+        retainer: '',
+        dateAdded: new Date().toISOString().split('T')[0],
+        status: 'active'
+      });
+
+      useEffect(() => {
+        loadData();
+      }, []);
+
+      const loadData = async () => {
+        try {
+          const clientsResult = await window.storage.get('agency-clients');
+          if (clientsResult) {
+            setClients(JSON.parse(clientsResult.value));
+          }
+          
+          const stripeResult = await window.storage.get('stripe-api-key');
+          if (stripeResult) {
+            setStripeApiKey(stripeResult.value);
+            setStripeConnected(true);
+          }
+
+          const syncResult = await window.storage.get('last-sync');
+          if (syncResult) {
+            setLastSync(syncResult.value);
+          }
+        } catch (error) {
+          console.log('No existing data found');
+        }
+      };
+
+      const saveClients = async (updatedClients) => {
+        try {
+          await window.storage.set('agency-clients', JSON.stringify(updatedClients));
+          setClients(updatedClients);
+        } catch (error) {
+          console.error('Failed to save clients:', error);
+        }
+      };
+
+      const addClient = async () => {
+        if (!newClient.name || !newClient.retainer) {
+          alert('Please fill in all required fields');
+          return;
+        }
+
+        const client = {
+          id: Date.now().toString(),
+          name: newClient.name,
+          retainer: parseFloat(newClient.retainer),
+          dateAdded: newClient.dateAdded,
+          status: 'active',
+          totalPaid: 0,
+          payments: []
+        };
+
+        await saveClients([...clients, client]);
+        setNewClient({ name: '', retainer: '', dateAdded: new Date().toISOString().split('T')[0], status: 'active' });
+        setShowAddClient(false);
+      };
+
+      const toggleClientStatus = async (clientId) => {
+        const updatedClients = clients.map(client => {
+          if (client.id === clientId) {
+            return {
+              ...client,
+              status: client.status === 'active' ? 'churned' : 'active'
+            };
+          }
+          return client;
+        });
+        await saveClients(updatedClients);
+      };
+
+      const deleteClient = async (clientId) => {
+        if (confirm('Are you sure you want to delete this client?')) {
+          await saveClients(clients.filter(c => c.id !== clientId));
+        }
+      };
+
+      const saveStripeKey = async () => {
+        try {
+          await window.storage.set('stripe-api-key', stripeApiKey);
+          setStripeConnected(true);
+          setShowStripeModal(false);
+          alert('Stripe API key saved! Note: Direct browser calls to Stripe are blocked by CORS. You\'ll need to manually add clients for now or set up a backend.');
+        } catch (error) {
+          console.error('Failed to save Stripe key:', error);
+        }
+      };
+
+      const syncWithStripe = async () => {
+        alert('Direct Stripe API calls require a backend server due to CORS restrictions. For now, please add clients manually. Would you like help setting up a backend?');
+      };
+
+      const activeClients = clients.filter(c => c.status === 'active');
+      const churnedClients = clients.filter(c => c.status === 'churned');
+      
+      const totalMRR = activeClients.reduce((sum, c) => sum + c.retainer, 0);
+      const totalRevenue = clients.reduce((sum, c) => sum + (c.totalPaid || 0), 0);
+      const oneTimeRevenue = 0;
+      const grossProfit = totalRevenue * 0.7;
+
+      const currentMonth = new Date(selectedMonth).toLocaleString('default', { month: 'long', year: 'numeric' });
+      const thisMonthRevenue = totalMRR;
+
+      const HomePage = () => (
+        <div>
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Overview</h1>
+              <p className="text-gray-600">Track your agency's performance and growth</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <button
+                onClick={syncWithStripe}
+                disabled={!stripeConnected || loading}
+                className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                Sync with Stripe
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg p-6 mb-8 text-white">
+            <h2 className="text-xl font-semibold mb-2">{currentMonth}</h2>
+            <div className="flex items-baseline gap-2">
+              <span className="text-4xl font-bold">${thisMonthRevenue.toLocaleString()}</span>
+              <span className="text-blue-200">revenue this month</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-6 mb-6">
+            <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-green-500">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-gray-600 text-sm font-medium uppercase tracking-wide">Total Revenue</h3>
+              </div>
+              <p className="text-3xl font-bold text-gray-900">${totalRevenue.toLocaleString()}</p>
+              <p className="text-sm text-gray-500 mt-2">All-time revenue</p>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-blue-500">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-gray-600 text-sm font-medium uppercase tracking-wide">MRR</h3>
+              </div>
+              <p className="text-3xl font-bold text-gray-900">${totalMRR.toLocaleString()}</p>
+              <p className="text-sm text-gray-500 mt-2">Monthly recurring revenue</p>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-purple-500">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-gray-600 text-sm font-medium uppercase tracking-wide">One-Time Revenue</h3>
+              </div>
+              <p className="text-3xl font-bold text-gray-900">${oneTimeRevenue.toLocaleString()}</p>
+              <p className="text-sm text-gray-500 mt-2">Project-based income</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-6">
+            <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-emerald-500">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-gray-600 text-sm font-medium uppercase tracking-wide">Total Active Clients</h3>
+              </div>
+              <p className="text-3xl font-bold text-gray-900">{activeClients.length}</p>
+              <p className="text-sm text-gray-500 mt-2">Currently active</p>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-red-500">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-gray-600 text-sm font-medium uppercase tracking-wide">Churned Clients</h3>
+              </div>
+              <p className="text-3xl font-bold text-gray-900">{churnedClients.length}</p>
+              <p className="text-sm text-gray-500 mt-2">No longer active</p>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-yellow-500">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-gray-600 text-sm font-medium uppercase tracking-wide">Gross Profit</h3>
+              </div>
+              <p className="text-3xl font-bold text-gray-900">${grossProfit.toLocaleString()}</p>
+              <p className="text-sm text-gray-500 mt-2">Estimated profit margin</p>
+            </div>
+          </div>
+        </div>
+      );
+
+      const ClientsPage = () => (
+        <div>
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Clients</h1>
+              <p className="text-gray-600">Manage your client relationships</p>
+            </div>
+            <button
+              onClick={() => setShowAddClient(!showAddClient)}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+            >
+              + Add Client
+            </button>
+          </div>
+
+          {showAddClient && (
+            <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+              <h3 className="text-lg font-semibold mb-4">Add New Client</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  placeholder="Client Name"
+                  value={newClient.name}
+                  onChange={(e) => setNewClient({...newClient, name: e.target.value})}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <input
+                  type="number"
+                  placeholder="Monthly Retainer ($)"
+                  value={newClient.retainer}
+                  onChange={(e) => setNewClient({...newClient, retainer: e.target.value})}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <input
+                  type="date"
+                  value={newClient.dateAdded}
+                  onChange={(e) => setNewClient({...newClient, dateAdded: e.target.value})}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <select
+                  value={newClient.status}
+                  onChange={(e) => setNewClient({...newClient, status: e.target.value})}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="active">Active</option>
+                  <option value="churned">Churned</option>
+                </select>
+              </div>
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={addClient}
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
+                >
+                  Save Client
+                </button>
+                <button
+                  onClick={() => setShowAddClient(false)}
+                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Client Name</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date Added</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Retainer</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Total Paid</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {clients.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                        No clients yet. Click "Add Client" to get started!
+                      </td>
+                    </tr>
+                  ) : (
+                    clients.map(client => (
+                      <tr key={client.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{client.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{client.dateAdded}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">${client.retainer.toLocaleString()}/mo</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                            client.status === 'active' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {client.status.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
+                          ${(client.totalPaid || 0).toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                          <button
+                            onClick={() => toggleClientStatus(client.id)}
+                            className={`px-3 py-1 rounded-md text-xs font-medium transition ${
+                              client.status === 'active'
+                                ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                : 'bg-green-100 text-green-700 hover:bg-green-200'
+                            }`}
+                          >
+                            {client.status === 'active' ? 'Mark Churned' : 'Reactivate'}
+                          </button>
+                          <button
+                            onClick={() => deleteClient(client.id)}
+                            className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-xs font-medium transition"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+
+      return (
+        <div className="flex h-screen bg-gray-50">
+          <div className="w-64 bg-gray-900 text-white flex flex-col">
+            <div className="p-6 border-b border-gray-800">
+              <h2 className="text-2xl font-bold">Agency Hub</h2>
+            </div>
+            
+            <nav className="flex-1 p-4">
+              <button
+                onClick={() => setCurrentPage('home')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition ${
+                  currentPage === 'home' 
+                    ? 'bg-blue-600 text-white' 
+                    : 'text-gray-300 hover:bg-gray-800'
+                }`}
+              >
+                <span className="font-medium">Home</span>
+              </button>
+              
+              <button
+                onClick={() => setCurrentPage('clients')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                  currentPage === 'clients' 
+                    ? 'bg-blue-600 text-white' 
+                    : 'text-gray-300 hover:bg-gray-800'
+                }`}
+              >
+                <span className="font-medium">Clients</span>
+              </button>
+            </nav>
+
+            <div className="p-4 border-t border-gray-800">
+              <button
+                onClick={() => setShowStripeModal(true)}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 transition"
+              >
+                <div className="text-left flex-1">
+                  <div className="font-medium text-sm">Stripe Integration</div>
+                  <div className="text-xs text-gray-500">
+                    {stripeConnected ? '✓ Connected' : 'Not connected'}
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-auto">
+            <div className="p-8">
+              {currentPage === 'home' ? <HomePage /> : <ClientsPage />}
+            </div>
+          </div>
+
+          {showStripeModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+                <h3 className="text-xl font-bold mb-4">Stripe API Configuration</h3>
+                <p className="text-gray-600 text-sm mb-4">
+                  Note: Direct browser API calls are blocked by CORS. For now, add clients manually.
+                </p>
+                <input
+                  type="password"
+                  placeholder="sk_live_... or sk_test_..."
+                  value={stripeApiKey}
+                  onChange={(e) => setStripeApiKey(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
+                />
+                <div className="flex gap-3">
+                  <button
+                    onClick={saveStripeKey}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+                  >
+                    Save Key
+                  </button>
+                  <button
+                    onClick={() => setShowStripeModal(false)}
+                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    ReactDOM.render(<AgencyDashboard />, document.getElementById('root'));
+  </script>
+</body>
+</html>
