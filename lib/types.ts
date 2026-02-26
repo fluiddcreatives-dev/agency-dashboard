@@ -15,6 +15,8 @@ export interface Client {
   upsold?: boolean;
   upsellMrr?: number;
   upsellDate?: string;
+  onboardingDate?: string;  // when onboarding started
+  flowsLiveDate?: string;   // when flows went live
   createdAt: string;
   updatedAt: string;
 }

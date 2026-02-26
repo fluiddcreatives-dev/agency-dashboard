@@ -15,6 +15,8 @@ type FormData = {
   upsold: boolean;
   upsellMrr: string;
   upsellDate: string;
+  onboardingDate: string;
+  flowsLiveDate: string;
 };
 
 const defaultForm: FormData = {
@@ -29,6 +31,8 @@ const defaultForm: FormData = {
   upsold: false,
   upsellMrr: '',
   upsellDate: '',
+  onboardingDate: '',
+  flowsLiveDate: '',
 };
 
 function clientToForm(client: Client): FormData {
@@ -44,6 +48,8 @@ function clientToForm(client: Client): FormData {
     upsold: client.upsold ?? false,
     upsellMrr: client.upsellMrr?.toString() ?? '',
     upsellDate: client.upsellDate ?? '',
+    onboardingDate: client.onboardingDate ?? '',
+    flowsLiveDate: client.flowsLiveDate ?? '',
   };
 }
 
@@ -88,6 +94,8 @@ export default function ClientForm({ client, initialClientType, onSave, onCancel
         form.clientType === 'flow_setup' && form.upsold && form.upsellDate
           ? form.upsellDate
           : undefined,
+      onboardingDate: form.clientType === 'flow_setup' && form.onboardingDate ? form.onboardingDate : undefined,
+      flowsLiveDate: form.clientType === 'flow_setup' && form.flowsLiveDate ? form.flowsLiveDate : undefined,
     });
   }
 
@@ -208,6 +216,30 @@ export default function ClientForm({ client, initialClientType, onSave, onCancel
               </div>
             )}
           </div>
+
+          {/* Flow Setup: Onboarding → Live dates */}
+          {isFlowSetup && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Onboarding Date</label>
+                <input
+                  type="date"
+                  value={form.onboardingDate}
+                  onChange={(e) => set('onboardingDate', e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Flows Live Date</label>
+                <input
+                  type="date"
+                  value={form.flowsLiveDate}
+                  onChange={(e) => set('flowsLiveDate', e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Flow Setup: Qualification + Upsell tracking */}
           {isFlowSetup && (

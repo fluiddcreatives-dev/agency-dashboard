@@ -16,6 +16,8 @@ function toClient(row: any): Client {
     upsold: row.upsold ?? undefined,
     upsellMrr: row.upsell_mrr != null ? Number(row.upsell_mrr) : undefined,
     upsellDate: row.upsell_date ?? undefined,
+    onboardingDate: row.onboarding_date ?? undefined,
+    flowsLiveDate: row.flows_live_date ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -35,6 +37,8 @@ function toRow(client: Client) {
     upsold: client.upsold ?? null,
     upsell_mrr: client.upsellMrr ?? null,
     upsell_date: client.upsellDate ?? null,
+    onboarding_date: client.onboardingDate ?? null,
+    flows_live_date: client.flowsLiveDate ?? null,
     created_at: client.createdAt,
     updated_at: client.updatedAt,
   };

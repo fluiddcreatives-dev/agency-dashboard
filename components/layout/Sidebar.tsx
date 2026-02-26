@@ -15,11 +15,13 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [email, setEmail] = useState('');
+  const [isPM, setIsPM] = useState(false);
 
   useEffect(() => {
     const supabase = createBrowserClient();
     supabase.auth.getUser().then(({ data }) => {
       setEmail(data.user?.email ?? '');
+      setIsPM(data.user?.user_metadata?.role === 'pm');
     });
   }, []);
 
@@ -37,7 +39,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {navItems.map((item) => {
+        {navItems.filter((item) => !(isPM && item.href === '/')).map((item) => {
           const active = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
           return (
             <Link

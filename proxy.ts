@@ -26,6 +26,8 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   const isLoginPage = request.nextUrl.pathname === '/login';
+  const isDashboard = request.nextUrl.pathname === '/';
+  const isPM = user?.user_metadata?.role === 'pm';
 
   if (!user && !isLoginPage) {
     const url = request.nextUrl.clone();
@@ -35,7 +37,14 @@ export async function proxy(request: NextRequest) {
 
   if (user && isLoginPage) {
     const url = request.nextUrl.clone();
-    url.pathname = '/';
+    url.pathname = isPM ? '/flow-setups' : '/';
+    return NextResponse.redirect(url);
+  }
+
+  // PMs cannot access the business dashboard
+  if (user && isPM && isDashboard) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/flow-setups';
     return NextResponse.redirect(url);
   }
 

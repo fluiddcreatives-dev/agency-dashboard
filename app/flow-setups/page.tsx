@@ -267,6 +267,85 @@ export default function FlowSetupsPage() {
         </div>
       )}
 
+      {/* Time to Launch tracker */}
+      {flowClients.some((c) => c.onboardingDate) && (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-700">Time to Launch</h3>
+            <p className="text-xs text-gray-400 mt-0.5">Onboarding start → Flows live</p>
+          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100">
+                <th className="text-left px-5 py-3 font-medium text-gray-500">Company</th>
+                <th className="text-left px-5 py-3 font-medium text-gray-500">Onboarding</th>
+                <th className="text-left px-5 py-3 font-medium text-gray-500">Flows Live</th>
+                <th className="text-right px-5 py-3 font-medium text-gray-500">Days to Launch</th>
+                <th className="text-left px-5 py-3 font-medium text-gray-500">Status</th>
+                <th className="px-5 py-3" />
+              </tr>
+            </thead>
+            <tbody>
+              {flowClients
+                .filter((c) => c.onboardingDate)
+                .sort((a, b) => new Date(b.onboardingDate!).getTime() - new Date(a.onboardingDate!).getTime())
+                .map((client) => {
+                  const start = client.onboardingDate ? new Date(client.onboardingDate) : null;
+                  const end = client.flowsLiveDate ? new Date(client.flowsLiveDate) : null;
+                  const days = start && end
+                    ? Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+                    : null;
+                  const inProgress = start && !end;
+                  const daysSoFar = start && !end
+                    ? Math.round((new Date().getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+                    : null;
+                  return (
+                    <tr key={client.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                      <td className="px-5 py-3 font-medium text-gray-900">{client.name}</td>
+                      <td className="px-5 py-3 text-gray-500">
+                        {start ? start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                      </td>
+                      <td className="px-5 py-3 text-gray-500">
+                        {end ? end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : <span className="text-gray-300">Not yet</span>}
+                      </td>
+                      <td className="px-5 py-3 text-right font-semibold">
+                        {days !== null
+                          ? <span className={days <= 14 ? 'text-green-600' : days <= 30 ? 'text-yellow-600' : 'text-red-500'}>{days}d</span>
+                          : inProgress
+                            ? <span className="text-indigo-500">{daysSoFar}d so far</span>
+                            : '—'}
+                      </td>
+                      <td className="px-5 py-3">
+                        {end
+                          ? <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Live</span>
+                          : <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">In Progress</span>}
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <Link href={`/clients/${client.id}`} className="text-indigo-600 hover:text-indigo-800 font-medium text-xs">View →</Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+            </tbody>
+          </table>
+          {/* Avg time to launch summary */}
+          {flowClients.some((c) => c.onboardingDate && c.flowsLiveDate) && (() => {
+            const completed = flowClients.filter((c) => c.onboardingDate && c.flowsLiveDate);
+            const avg = completed.reduce((sum, c) => {
+              const d = Math.round((new Date(c.flowsLiveDate!).getTime() - new Date(c.onboardingDate!).getTime()) / (1000 * 60 * 60 * 24));
+              return sum + d;
+            }, 0) / completed.length;
+            return (
+              <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-1 text-xs text-gray-500">
+                <span>Avg time to launch:</span>
+                <span className="font-semibold text-gray-700">{Math.round(avg)} days</span>
+                <span className="text-gray-400">across {completed.length} completed setup{completed.length !== 1 ? 's' : ''}</span>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
       {/* All Flow Setup Clients */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
