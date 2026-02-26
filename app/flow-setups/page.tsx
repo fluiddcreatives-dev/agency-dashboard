@@ -56,11 +56,24 @@ function StatCard({
   );
 }
 
-type QualFilter = 'all' | 'qualified' | 'not_qualified';
+type StatusFilter = 'all' | 'in_progress' | 'flows_live' | 'upsold';
+
+function clientStatus(c: { flowsLiveDate?: string; upsold?: boolean }) {
+  if (c.upsold) return 'upsold';
+  if (c.flowsLiveDate) return 'flows_live';
+  return 'in_progress';
+}
+
+function StatusBadge({ client }: { client: { flowsLiveDate?: string; upsold?: boolean } }) {
+  const s = clientStatus(client);
+  if (s === 'upsold') return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Upsold</span>;
+  if (s === 'flows_live') return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">Flows Live</span>;
+  return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">In Progress</span>;
+}
 
 export default function FlowSetupsPage() {
   const { clients, loaded } = useClients();
-  const [qualFilter, setQualFilter] = useState<QualFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
   const flowClients = useMemo(
     () => clients.filter((c) => c.clientType === 'flow_setup'),
@@ -68,10 +81,9 @@ export default function FlowSetupsPage() {
   );
 
   const filteredFlowClients = useMemo(() => {
-    if (qualFilter === 'qualified') return flowClients.filter((c) => c.qualified === true);
-    if (qualFilter === 'not_qualified') return flowClients.filter((c) => c.qualified === false);
-    return flowClients;
-  }, [flowClients, qualFilter]);
+    if (statusFilter === 'all') return flowClients;
+    return flowClients.filter((c) => clientStatus(c) === statusFilter);
+  }, [flowClients, statusFilter]);
 
   const monthly = useMemo(() => getFlowSetupMonthlyMetrics(clients), [clients]);
 
@@ -351,17 +363,22 @@ export default function FlowSetupsPage() {
           </div>
           <div className="flex items-center gap-3">
             <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
-              {(['all', 'qualified', 'not_qualified'] as QualFilter[]).map((f) => (
+              {([
+                { key: 'all', label: 'All' },
+                { key: 'in_progress', label: 'In Progress' },
+                { key: 'flows_live', label: 'Flows Live' },
+                { key: 'upsold', label: 'Upsold' },
+              ] as { key: StatusFilter; label: string }[]).map((f) => (
                 <button
-                  key={f}
-                  onClick={() => setQualFilter(f)}
-                  className={`px-3 py-1.5 transition-colors ${
-                    qualFilter === f
+                  key={f.key}
+                  onClick={() => setStatusFilter(f.key)}
+                  className={`px-3 py-1.5 transition-colors border-l border-gray-200 first:border-l-0 ${
+                    statusFilter === f.key
                       ? 'bg-indigo-600 text-white'
                       : 'bg-white text-gray-500 hover:bg-gray-50'
                   }`}
                 >
-                  {f === 'all' ? 'All' : f === 'qualified' ? 'Qualified' : 'Not Qualified'}
+                  {f.label}
                 </button>
               ))}
             </div>
@@ -385,13 +402,12 @@ export default function FlowSetupsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="text-left px-5 py-3 font-medium text-gray-500">Company</th>
+                <th className="text-left px-5 py-3 font-medium text-gray-500">Client</th>
                 <th className="text-left px-5 py-3 font-medium text-gray-500">Qualified</th>
                 <th className="text-left px-5 py-3 font-medium text-gray-500">Upsell</th>
-                <th className="text-right px-5 py-3 font-medium text-gray-500">Setup Fee</th>
-                <th className="text-right px-5 py-3 font-medium text-gray-500">Upsell MRR</th>
+                <th className="text-left px-5 py-3 font-medium text-gray-500">Status</th>
                 <th className="text-left px-5 py-3 font-medium text-gray-500">Setup Date</th>
-                <th className="text-left px-5 py-3 font-medium text-gray-500">Upsell Date</th>
+                <th className="text-left px-5 py-3 font-medium text-gray-500">Launch Date</th>
                 <th className="px-5 py-3" />
               </tr>
             </thead>
@@ -403,18 +419,13 @@ export default function FlowSetupsPage() {
                     <td className="px-5 py-3 font-medium text-gray-900">{client.name}</td>
                     <td className="px-5 py-3"><QualifiedBadge qualified={client.qualified} /></td>
                     <td className="px-5 py-3"><UpsellBadge upsold={client.upsold} /></td>
-                    <td className="px-5 py-3 text-right text-gray-700">{formatCurrency(client.monthlySpend)}</td>
-                    <td className="px-5 py-3 text-right">
-                      {client.upsold && client.upsellMrr
-                        ? <span className="text-green-600 font-medium">{formatCurrency(client.upsellMrr)}/mo</span>
-                        : <span className="text-gray-300">—</span>}
-                    </td>
+                    <td className="px-5 py-3"><StatusBadge client={client} /></td>
                     <td className="px-5 py-3 text-gray-500">
                       {new Date(client.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
                     <td className="px-5 py-3 text-gray-500">
-                      {client.upsellDate
-                        ? new Date(client.upsellDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                      {client.flowsLiveDate
+                        ? new Date(client.flowsLiveDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                         : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-5 py-3 text-right">
