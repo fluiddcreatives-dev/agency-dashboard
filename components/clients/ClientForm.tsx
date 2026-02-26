@@ -217,27 +217,16 @@ export default function ClientForm({ client, initialClientType, onSave, onCancel
             )}
           </div>
 
-          {/* Flow Setup: Onboarding → Live dates */}
+          {/* Flow Setup: Flows Live date */}
           {isFlowSetup && (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Onboarding Date</label>
-                <input
-                  type="date"
-                  value={form.onboardingDate}
-                  onChange={(e) => set('onboardingDate', e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Flows Live Date</label>
-                <input
-                  type="date"
-                  value={form.flowsLiveDate}
-                  onChange={(e) => set('flowsLiveDate', e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Flows Live Date</label>
+              <input
+                type="date"
+                value={form.flowsLiveDate}
+                onChange={(e) => set('flowsLiveDate', e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
             </div>
           )}
 

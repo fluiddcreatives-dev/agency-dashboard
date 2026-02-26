@@ -268,17 +268,17 @@ export default function FlowSetupsPage() {
       )}
 
       {/* Time to Launch tracker */}
-      {flowClients.some((c) => c.onboardingDate) && (
+      {flowClients.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100">
             <h3 className="text-sm font-semibold text-gray-700">Time to Launch</h3>
-            <p className="text-xs text-gray-400 mt-0.5">Onboarding start → Flows live</p>
+            <p className="text-xs text-gray-400 mt-0.5">Setup date → Flows live</p>
           </div>
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th className="text-left px-5 py-3 font-medium text-gray-500">Company</th>
-                <th className="text-left px-5 py-3 font-medium text-gray-500">Onboarding</th>
+                <th className="text-left px-5 py-3 font-medium text-gray-500">Setup Date</th>
                 <th className="text-left px-5 py-3 font-medium text-gray-500">Flows Live</th>
                 <th className="text-right px-5 py-3 font-medium text-gray-500">Days to Launch</th>
                 <th className="text-left px-5 py-3 font-medium text-gray-500">Status</th>
@@ -287,23 +287,21 @@ export default function FlowSetupsPage() {
             </thead>
             <tbody>
               {flowClients
-                .filter((c) => c.onboardingDate)
-                .sort((a, b) => new Date(b.onboardingDate!).getTime() - new Date(a.onboardingDate!).getTime())
+                .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
                 .map((client) => {
-                  const start = client.onboardingDate ? new Date(client.onboardingDate) : null;
+                  const start = new Date(client.startDate);
                   const end = client.flowsLiveDate ? new Date(client.flowsLiveDate) : null;
-                  const days = start && end
+                  const days = end
                     ? Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
                     : null;
-                  const inProgress = start && !end;
-                  const daysSoFar = start && !end
+                  const daysSoFar = !end
                     ? Math.round((new Date().getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
                     : null;
                   return (
                     <tr key={client.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                       <td className="px-5 py-3 font-medium text-gray-900">{client.name}</td>
                       <td className="px-5 py-3 text-gray-500">
-                        {start ? start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                        {start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </td>
                       <td className="px-5 py-3 text-gray-500">
                         {end ? end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : <span className="text-gray-300">Not yet</span>}
@@ -311,9 +309,7 @@ export default function FlowSetupsPage() {
                       <td className="px-5 py-3 text-right font-semibold">
                         {days !== null
                           ? <span className={days <= 14 ? 'text-green-600' : days <= 30 ? 'text-yellow-600' : 'text-red-500'}>{days}d</span>
-                          : inProgress
-                            ? <span className="text-indigo-500">{daysSoFar}d so far</span>
-                            : '—'}
+                          : <span className="text-indigo-500">{daysSoFar}d so far</span>}
                       </td>
                       <td className="px-5 py-3">
                         {end
@@ -329,10 +325,10 @@ export default function FlowSetupsPage() {
             </tbody>
           </table>
           {/* Avg time to launch summary */}
-          {flowClients.some((c) => c.onboardingDate && c.flowsLiveDate) && (() => {
-            const completed = flowClients.filter((c) => c.onboardingDate && c.flowsLiveDate);
+          {flowClients.some((c) => c.flowsLiveDate) && (() => {
+            const completed = flowClients.filter((c) => c.flowsLiveDate);
             const avg = completed.reduce((sum, c) => {
-              const d = Math.round((new Date(c.flowsLiveDate!).getTime() - new Date(c.onboardingDate!).getTime()) / (1000 * 60 * 60 * 24));
+              const d = Math.round((new Date(c.flowsLiveDate!).getTime() - new Date(c.startDate).getTime()) / (1000 * 60 * 60 * 24));
               return sum + d;
             }, 0) / completed.length;
             return (
