@@ -25,9 +25,10 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  const isLoginPage = request.nextUrl.pathname === '/login';
-  const isDashboard = request.nextUrl.pathname === '/';
+  const path = request.nextUrl.pathname;
+  const isLoginPage = path === '/login';
   const isPM = user?.user_metadata?.role === 'pm';
+  const isPMBlocked = isPM && (path === '/' || path.startsWith('/clients'));
 
   if (!user && !isLoginPage) {
     const url = request.nextUrl.clone();
@@ -41,8 +42,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // PMs cannot access the business dashboard
-  if (user && isPM && isDashboard) {
+  // PMs can only access /flow-setups
+  if (user && isPMBlocked) {
     const url = request.nextUrl.clone();
     url.pathname = '/flow-setups';
     return NextResponse.redirect(url);
