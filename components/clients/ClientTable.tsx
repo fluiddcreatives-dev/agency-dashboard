@@ -35,6 +35,7 @@ function clientLtv(client: Client): number {
 
 type SortKey = 'monthlySpend' | 'ltv' | 'startDate';
 type SortDir = 'desc' | 'asc';
+type FlowStatusFilter = 'all' | 'in_progress' | 'flows_live' | 'upsold';
 
 interface Props {
   clients: Client[];
@@ -47,6 +48,26 @@ const STATUS_FILTERS: { label: string; value: ClientStatus | 'all' }[] = [
   { label: 'Paused', value: 'paused' },
   { label: 'Churned', value: 'churned' },
 ];
+
+const FLOW_STATUS_FILTERS: { label: string; value: FlowStatusFilter }[] = [
+  { label: 'All', value: 'all' },
+  { label: 'In Progress', value: 'in_progress' },
+  { label: 'Flows Live', value: 'flows_live' },
+  { label: 'Upsold', value: 'upsold' },
+];
+
+function flowClientStatus(client: Client): FlowStatusFilter {
+  if (client.upsold) return 'upsold';
+  if (client.flowsLiveDate) return 'flows_live';
+  return 'in_progress';
+}
+
+function FlowStatusBadge({ client }: { client: Client }) {
+  const s = flowClientStatus(client);
+  if (s === 'upsold') return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Upsold</span>;
+  if (s === 'flows_live') return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">Flows Live</span>;
+  return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">In Progress</span>;
+}
 
 function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   if (!active) return <span className="ml-1 text-gray-300">↕</span>;
@@ -94,6 +115,7 @@ export default function ClientTable({ clients, onAdd }: Props) {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<ClientType>('recurring');
   const [statusFilter, setStatusFilter] = useState<ClientStatus | 'all'>('all');
+  const [flowStatusFilter, setFlowStatusFilter] = useState<FlowStatusFilter>('all');
   const [sortKey, setSortKey] = useState<SortKey>('monthlySpend');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
@@ -118,7 +140,9 @@ export default function ClientTable({ clients, onAdd }: Props) {
   const filtered = byType
     .filter((c) => {
       const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
+      const matchesStatus = isFlow
+        ? flowStatusFilter === 'all' || flowClientStatus(c) === flowStatusFilter
+        : statusFilter === 'all' || c.status === statusFilter;
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => {
@@ -177,19 +201,33 @@ export default function ClientTable({ clients, onAdd }: Props) {
       {/* Toolbar */}
       <div className="flex items-center justify-between mb-5 gap-4 flex-wrap">
         <div className="flex items-center gap-2">
-          {STATUS_FILTERS.map((f) => (
-            <button
-              key={f.value}
-              onClick={() => setStatusFilter(f.value)}
-              className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
-                statusFilter === f.value
-                  ? isFlow ? 'bg-orange-500 text-white' : 'bg-indigo-600 text-white'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:border-indigo-400'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
+          {isFlow
+            ? FLOW_STATUS_FILTERS.map((f) => (
+                <button
+                  key={f.value}
+                  onClick={() => setFlowStatusFilter(f.value)}
+                  className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
+                    flowStatusFilter === f.value
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-white text-gray-600 border border-gray-200 hover:border-orange-400'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))
+            : STATUS_FILTERS.map((f) => (
+                <button
+                  key={f.value}
+                  onClick={() => setStatusFilter(f.value)}
+                  className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
+                    statusFilter === f.value
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-white text-gray-600 border border-gray-200 hover:border-indigo-400'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
         </div>
         <div className="flex items-center gap-3">
           <input
@@ -218,22 +256,23 @@ export default function ClientTable({ clients, onAdd }: Props) {
                 <>
                   <th className="text-left px-4 py-3 font-medium text-gray-500">Qualified</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500">Upsell</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-500">Status</th>
                 </>
               ) : (
                 <th className="text-left px-4 py-3 font-medium text-gray-500">Status</th>
               )}
-              <th className="text-right px-4 py-3">
-                <button
-                  onClick={() => handleSort('monthlySpend')}
-                  className="font-medium text-gray-500 hover:text-gray-900 transition-colors"
-                >
-                  {isFlow ? 'Setup Fee' : 'Monthly Revenue'}
-                  <SortIcon active={sortKey === 'monthlySpend'} dir={sortDir} />
-                </button>
-              </th>
-              {isFlow ? (
-                <th className="text-right px-4 py-3 font-medium text-gray-500">Upsell MRR</th>
-              ) : (
+              {!isFlow && (
+                <th className="text-right px-4 py-3">
+                  <button
+                    onClick={() => handleSort('monthlySpend')}
+                    className="font-medium text-gray-500 hover:text-gray-900 transition-colors"
+                  >
+                    Monthly Revenue
+                    <SortIcon active={sortKey === 'monthlySpend'} dir={sortDir} />
+                  </button>
+                </th>
+              )}
+              {!isFlow && (
                 <th className="text-right px-4 py-3">
                   <button
                     onClick={() => handleSort('ltv')}
@@ -249,11 +288,13 @@ export default function ClientTable({ clients, onAdd }: Props) {
                   onClick={() => handleSort('startDate')}
                   className="font-medium text-gray-500 hover:text-gray-900 transition-colors"
                 >
-                  {isFlow ? 'Setup Date' : 'Start Date'}
+                  Setup Date
                   <SortIcon active={sortKey === 'startDate'} dir={sortDir} />
                 </button>
               </th>
-              {!isFlow && (
+              {isFlow ? (
+                <th className="text-left px-4 py-3 font-medium text-gray-500">Launch Date</th>
+              ) : (
                 <th className="text-left px-4 py-3 font-medium text-gray-500">Churn Date</th>
               )}
               <th className="px-4 py-3" />
@@ -290,34 +331,39 @@ export default function ClientTable({ clients, onAdd }: Props) {
                       <td className="px-4 py-3">
                         <UpsellBadge upsold={client.upsold} />
                       </td>
+                      <td className="px-4 py-3">
+                        <FlowStatusBadge client={client} />
+                      </td>
                     </>
                   ) : (
                     <td className="px-4 py-3">
                       <StatusBadge status={client.status} />
                     </td>
                   )}
-                  <td className="px-4 py-3 text-right font-medium text-gray-900">
-                    {formatCurrency(effectiveSpend(client))}
-                  </td>
-                  {isFlow ? (
-                    <td className="px-4 py-3 text-right text-gray-700">
-                      {client.upsold && client.upsellMrr
-                        ? <span className="text-green-700 font-medium">{formatCurrency(client.upsellMrr)}/mo</span>
-                        : <span className="text-gray-300">—</span>}
+                  {!isFlow && (
+                    <td className="px-4 py-3 text-right font-medium text-gray-900">
+                      {formatCurrency(effectiveSpend(client))}
                     </td>
-                  ) : (
+                  )}
+                  {!isFlow && (
                     <td className="px-4 py-3 text-right text-gray-700">
                       {formatCurrency(clientLtv(client))}
                     </td>
                   )}
                   <td className="px-4 py-3 text-gray-500">
-                    {new Date(effectiveStart(client)).toLocaleDateString('en-US', {
+                    {new Date(client.startDate).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
                       year: 'numeric',
                     })}
                   </td>
-                  {!isFlow && (
+                  {isFlow ? (
+                    <td className="px-4 py-3 text-gray-500">
+                      {client.flowsLiveDate
+                        ? new Date(client.flowsLiveDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                        : <span className="text-gray-300">—</span>}
+                    </td>
+                  ) : (
                     <td className="px-4 py-3 text-gray-500">
                       {client.endDate
                         ? new Date(client.endDate).toLocaleDateString('en-US', {
