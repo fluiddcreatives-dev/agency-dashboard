@@ -39,7 +39,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {navItems.filter((item) => !isPM || item.href === '/flow-setups').map((item) => {
+        {navItems.filter((item) => !isPM || item.href !== '/').map((item) => {
           const active = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
           return (
             <Link

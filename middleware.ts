@@ -28,7 +28,7 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isLoginPage = path === '/login';
   const isPM = user?.user_metadata?.role === 'pm';
-  const isPMBlocked = isPM && (path === '/' || path.startsWith('/clients'));
+  const isPMBlocked = isPM && path === '/';
 
   if (!user && !isLoginPage) {
     const url = request.nextUrl.clone();
