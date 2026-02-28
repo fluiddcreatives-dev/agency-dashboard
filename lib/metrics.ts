@@ -298,10 +298,16 @@ export function getMonthDashboardMetrics(
   const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
   const activeAtStart = clients.filter((c) => isActiveInMonth(c, prevMonth) && c.status !== 'paused').length;
 
-  // Churned this month
-  const churnedThisMonth = clients.filter(
-    (c) => !!c.endDate && toYearMonth(c.endDate) === month
-  );
+  // Churned this month — for current month also include paused clients (no endDate)
+  // since paused = no longer contributing MRR
+  const churnedThisMonth =
+    month === currentMonth
+      ? clients.filter(
+          (c) =>
+            (!!c.endDate && toYearMonth(c.endDate) === month) ||
+            c.status === 'paused'
+        )
+      : clients.filter((c) => !!c.endDate && toYearMonth(c.endDate) === month);
   const churnedCount = churnedThisMonth.length;
   const churnedMrr = churnedThisMonth.reduce((sum, c) => sum + c.monthlySpend, 0);
   const churnRate = activeAtStart > 0 ? (churnedCount / activeAtStart) * 100 : 0;
