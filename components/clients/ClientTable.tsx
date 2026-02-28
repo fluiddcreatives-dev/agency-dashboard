@@ -128,6 +128,8 @@ export default function ClientTable({ clients, onAdd }: Props) {
     }
   }
 
+  const isFlow = typeFilter === 'flow_setup';
+
   const byType = clients.filter((c) => {
     const type = c.clientType ?? 'recurring';
     if (typeFilter === 'recurring') {
@@ -163,8 +165,6 @@ export default function ClientTable({ clients, onAdd }: Props) {
 
   const recurringCount = clients.filter((c) => !c.clientType || c.clientType === 'recurring').length;
   const flowCount = clients.filter((c) => c.clientType === 'flow_setup').length;
-
-  const isFlow = typeFilter === 'flow_setup';
 
   return (
     <div>
