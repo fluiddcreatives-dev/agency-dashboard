@@ -144,6 +144,15 @@ export default function DashboardPage() {
         />
       </div>
 
+      {/* MRR Growth — full width */}
+      <MRRGrowthChart clients={recurring} />
+
+      {/* Monthly Churn + NRR */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <MonthlyChurnChart clients={recurring} />
+        <NRRChart clients={recurring} />
+      </div>
+
       {/* Churned / New client breakdown */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Churned / Paused */}
@@ -205,15 +214,6 @@ export default function DashboardPage() {
             </ul>
           )}
         </div>
-      </div>
-
-      {/* MRR Growth — full width */}
-      <MRRGrowthChart clients={recurring} />
-
-      {/* Monthly Churn + NRR */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <MonthlyChurnChart clients={recurring} />
-        <NRRChart clients={recurring} />
       </div>
 
       {/* Recent Clients */}
