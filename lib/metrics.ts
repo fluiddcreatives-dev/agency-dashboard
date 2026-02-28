@@ -278,8 +278,14 @@ export function getMonthDashboardMetrics(
   clients: Client[],
   month: string
 ): MonthDashboardMetrics {
-  // Active at end of month
-  const activeInMonth = clients.filter((c) => isActiveInMonth(c, month));
+  const todayDate = new Date();
+  const currentMonth = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}`;
+
+  // Active clients: use status for current month (excludes paused), dates for history
+  const activeInMonth =
+    month === currentMonth
+      ? clients.filter((c) => c.status === 'active')
+      : clients.filter((c) => isActiveInMonth(c, month) && c.status !== 'paused');
   const activeCount = activeInMonth.length;
   const mrr = activeInMonth.reduce((sum, c) => sum + c.monthlySpend, 0);
   const avgSpend = activeCount > 0 ? mrr / activeCount : 0;
@@ -288,7 +294,7 @@ export function getMonthDashboardMetrics(
   const [y, m] = month.split('-').map(Number);
   const prevDate = new Date(y, m - 2, 1);
   const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
-  const activeAtStart = clients.filter((c) => isActiveInMonth(c, prevMonth)).length;
+  const activeAtStart = clients.filter((c) => isActiveInMonth(c, prevMonth) && c.status !== 'paused').length;
 
   // Churned this month
   const churnedThisMonth = clients.filter(
@@ -335,6 +341,9 @@ export function recurringOnly(clients: Client[]): Client[] {
       ...c,
       monthlySpend: c.upsellMrr ?? 0,
       startDate: c.upsellDate ?? c.startDate,
+      // Only carry endDate if they've actually churned from recurring — flow setup
+      // clients often have endDate set for the setup period, not recurring churn
+      endDate: c.status === 'active' ? undefined : c.endDate,
     }));
   return [...regular, ...upsoldAsRecurring];
 }
