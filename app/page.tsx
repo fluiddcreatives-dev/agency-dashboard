@@ -1,9 +1,14 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useClients } from '@/hooks/useClients';
-import { computeMetrics, formatCurrency, formatMonths, recurringOnly } from '@/lib/metrics';
+import {
+  formatCurrency,
+  formatMonths,
+  recurringOnly,
+  getMonthDashboardMetrics,
+} from '@/lib/metrics';
 import MetricCard from '@/components/dashboard/MetricCard';
 import MRRGrowthChart from '@/components/dashboard/MRRGrowthChart';
 import MonthlyChurnChart from '@/components/dashboard/MonthlyChurnChart';
@@ -11,16 +16,56 @@ import NRRChart from '@/components/dashboard/NRRChart';
 import StatusBadge from '@/components/clients/StatusBadge';
 import MigrateLocalData from '@/components/MigrateLocalData';
 
+function advanceMonth(yearMonth: string): string {
+  const [y, m] = yearMonth.split('-').map(Number);
+  return m === 12
+    ? `${y + 1}-01`
+    : `${y}-${String(m + 1).padStart(2, '0')}`;
+}
+
 export default function DashboardPage() {
   const { clients, loaded } = useClients();
   const recurring = useMemo(() => recurringOnly(clients), [clients]);
-  const metrics = useMemo(() => computeMetrics(recurring), [recurring]);
+
+  const today = new Date();
+  const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+
+  // Build month list from earliest client → current month
+  const months = useMemo(() => {
+    if (recurring.length === 0) return [currentMonth];
+    const earliest = recurring.map((c) => c.startDate.slice(0, 7)).sort()[0];
+    const list: string[] = [];
+    let m = earliest;
+    while (m <= currentMonth) {
+      list.push(m);
+      m = advanceMonth(m);
+    }
+    return list.reverse(); // most recent first
+  }, [recurring, currentMonth]);
+
+  const metrics = useMemo(
+    () => getMonthDashboardMetrics(recurring, selectedMonth),
+    [recurring, selectedMonth]
+  );
 
   if (!loaded) {
     return (
       <div className="flex items-center justify-center h-64 text-gray-400">Loading...</div>
     );
   }
+
+  const selectedLabel = new Date(selectedMonth + '-02').toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
+  });
+
+  const addedMrrDisplay =
+    metrics.addedMrr > 0
+      ? `+${formatCurrency(metrics.addedMrr)}`
+      : metrics.addedMrr < 0
+      ? `-${formatCurrency(Math.abs(metrics.addedMrr))}`
+      : formatCurrency(0);
 
   const recentClients = [...recurring]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -29,70 +74,73 @@ export default function DashboardPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       <MigrateLocalData />
+
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          {new Date().toLocaleDateString('en-US', {
-            weekday: 'long',
-            month: 'long',
-            day: 'numeric',
-            year: 'numeric',
-          })}
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-sm text-gray-500 mt-1">{selectedLabel}</p>
+        </div>
+        <select
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(e.target.value)}
+          className="border border-gray-200 rounded-lg px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm"
+        >
+          {months.map((m) => (
+            <option key={m} value={m}>
+              {new Date(m + '-02').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            </option>
+          ))}
+        </select>
       </div>
 
-      {/* Main Metrics */}
+      {/* Row 1: Active Clients | Current MRR | Churned % | Added MRR */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <MetricCard
           label="Active Clients"
-          value={metrics.activeClients.toString()}
-          sub={metrics.pausedClients > 0 ? `${metrics.pausedClients} paused` : undefined}
+          value={metrics.activeCount.toString()}
+          sub={`As of ${selectedLabel}`}
           accent="green"
         />
         <MetricCard
-          label="MRR"
+          label="Current MRR"
           value={formatCurrency(metrics.mrr)}
           sub="Monthly recurring revenue"
           accent="indigo"
         />
         <MetricCard
-          label="Avg Client Spend"
-          value={formatCurrency(metrics.avgMonthlySpend)}
-          sub="Per active client / month"
-          accent="indigo"
+          label="Churned Clients"
+          value={`${metrics.churnRate.toFixed(1)}%`}
+          sub={`${metrics.churnedCount} client${metrics.churnedCount !== 1 ? 's' : ''} lost`}
+          accent={metrics.churnRate > 10 ? 'red' : metrics.churnRate > 0 ? 'yellow' : 'gray'}
         />
         <MetricCard
-          label="Avg Client LTV"
-          value={formatCurrency(metrics.avgLtv)}
-          sub="Lifetime value"
-          accent="green"
+          label="Added MRR"
+          value={addedMrrDisplay}
+          sub="New MRR − Churned MRR"
+          accent={metrics.addedMrr > 0 ? 'green' : metrics.addedMrr < 0 ? 'red' : 'gray'}
         />
       </div>
 
-      {/* Secondary Metrics */}
+      {/* Row 2: Avg Retention | Avg LTV | Avg Client Spend */}
       <div className="grid grid-cols-3 gap-4">
         <MetricCard
-          label="Churned Clients"
-          value={metrics.churnedClients.toString()}
-          sub={`Churn rate ${metrics.churnRate.toFixed(1)}%`}
-          accent={metrics.churnRate > 20 ? 'red' : 'yellow'}
-        />
-        <MetricCard
           label="Avg Retention"
-          value={formatMonths(metrics.avgRetentionMonths)}
+          value={formatMonths(metrics.avgRetention)}
           sub="Average client lifespan"
           accent="gray"
         />
         <MetricCard
-          label="Total Clients"
-          value={(
-            metrics.activeClients +
-            metrics.pausedClients +
-            metrics.churnedClients
-          ).toString()}
-          sub="All time"
-          accent="gray"
+          label="Average LTV"
+          value={formatCurrency(metrics.avgLtv)}
+          sub="Lifetime value"
+          accent="green"
+        />
+        <MetricCard
+          label="Avg Client Spend"
+          value={formatCurrency(metrics.avgSpend)}
+          sub="Per active client / month"
+          accent="indigo"
         />
       </div>
 

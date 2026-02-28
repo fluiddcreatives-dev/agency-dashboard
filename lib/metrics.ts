@@ -261,6 +261,71 @@ export function getFlowSetupMonthlyMetrics(clients: Client[]): FlowSetupMonthPoi
   return result;
 }
 
+// ── Month-specific Dashboard Metrics ────────────────────────────────
+
+export interface MonthDashboardMetrics {
+  activeCount: number;
+  mrr: number;
+  churnedCount: number;
+  churnRate: number;   // %
+  addedMrr: number;   // new MRR - churned MRR
+  avgSpend: number;
+  avgRetention: number;
+  avgLtv: number;
+}
+
+export function getMonthDashboardMetrics(
+  clients: Client[],
+  month: string
+): MonthDashboardMetrics {
+  // Active at end of month
+  const activeInMonth = clients.filter((c) => isActiveInMonth(c, month));
+  const activeCount = activeInMonth.length;
+  const mrr = activeInMonth.reduce((sum, c) => sum + c.monthlySpend, 0);
+  const avgSpend = activeCount > 0 ? mrr / activeCount : 0;
+
+  // Previous month (for churn rate denominator)
+  const [y, m] = month.split('-').map(Number);
+  const prevDate = new Date(y, m - 2, 1);
+  const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+  const activeAtStart = clients.filter((c) => isActiveInMonth(c, prevMonth)).length;
+
+  // Churned this month
+  const churnedThisMonth = clients.filter(
+    (c) => !!c.endDate && toYearMonth(c.endDate) === month
+  );
+  const churnedCount = churnedThisMonth.length;
+  const churnedMrr = churnedThisMonth.reduce((sum, c) => sum + c.monthlySpend, 0);
+  const churnRate = activeAtStart > 0 ? (churnedCount / activeAtStart) * 100 : 0;
+
+  // New clients started this month
+  const newMrr = clients
+    .filter((c) => toYearMonth(c.startDate) === month)
+    .reduce((sum, c) => sum + c.monthlySpend, 0);
+  const addedMrr = newMrr - churnedMrr;
+
+  // Averages based on all clients started on or before this month
+  const today = new Date().toISOString();
+  const relevant = clients.filter((c) => toYearMonth(c.startDate) <= month);
+
+  const retentionData = relevant.map((c) =>
+    Math.max(1, monthsBetween(c.startDate, c.endDate ?? today))
+  );
+  const avgRetention =
+    retentionData.length > 0
+      ? retentionData.reduce((a, b) => a + b, 0) / retentionData.length
+      : 0;
+
+  const withSpend = relevant.filter((c) => c.monthlySpend > 0);
+  const totalLtv = withSpend.reduce((sum, c) => {
+    const months = Math.max(1, monthsBetween(c.startDate, c.endDate ?? today));
+    return sum + c.monthlySpend * months;
+  }, 0);
+  const avgLtv = withSpend.length > 0 ? totalLtv / withSpend.length : 0;
+
+  return { activeCount, mrr, churnedCount, churnRate, addedMrr, avgSpend, avgRetention, avgLtv };
+}
+
 // Helper used by dashboard — includes upsold flow clients as recurring (using their upsellMrr)
 export function recurringOnly(clients: Client[]): Client[] {
   const regular = clients.filter(isRecurring);
