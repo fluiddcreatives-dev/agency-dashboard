@@ -117,7 +117,7 @@ export default function DashboardPage() {
         <MetricCard
           label="Added MRR"
           value={addedMrrDisplay}
-          sub="New MRR − Churned MRR"
+          sub={`+${formatCurrency(metrics.newMrr)} new · −${formatCurrency(metrics.churnedMrr)} churned`}
           accent={metrics.addedMrr > 0 ? 'green' : metrics.addedMrr < 0 ? 'red' : 'gray'}
         />
       </div>

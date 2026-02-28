@@ -268,7 +268,9 @@ export interface MonthDashboardMetrics {
   mrr: number;
   churnedCount: number;
   churnRate: number;   // %
-  addedMrr: number;   // new MRR - churned MRR
+  newMrr: number;     // MRR added from new clients this month
+  churnedMrr: number; // MRR lost from churned clients this month
+  addedMrr: number;   // newMrr - churnedMrr
   avgSpend: number;
   avgRetention: number;
   avgLtv: number;
@@ -329,7 +331,7 @@ export function getMonthDashboardMetrics(
   }, 0);
   const avgLtv = withSpend.length > 0 ? totalLtv / withSpend.length : 0;
 
-  return { activeCount, mrr, churnedCount, churnRate, addedMrr, avgSpend, avgRetention, avgLtv };
+  return { activeCount, mrr, churnedCount, churnRate, newMrr, churnedMrr, addedMrr, avgSpend, avgRetention, avgLtv };
 }
 
 // Helper used by dashboard — includes upsold flow clients as recurring (using their upsellMrr)
