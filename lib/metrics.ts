@@ -274,6 +274,8 @@ export interface MonthDashboardMetrics {
   avgSpend: number;
   avgRetention: number;
   avgLtv: number;
+  churnedClients: Client[];  // clients counted in churnedMrr
+  newClients: Client[];      // clients counted in newMrr
 }
 
 export function getMonthDashboardMetrics(
@@ -313,9 +315,8 @@ export function getMonthDashboardMetrics(
   const churnRate = activeAtStart > 0 ? (churnedCount / activeAtStart) * 100 : 0;
 
   // New clients started this month
-  const newMrr = clients
-    .filter((c) => toYearMonth(c.startDate) === month)
-    .reduce((sum, c) => sum + c.monthlySpend, 0);
+  const newClients = clients.filter((c) => toYearMonth(c.startDate) === month);
+  const newMrr = newClients.reduce((sum, c) => sum + c.monthlySpend, 0);
   const addedMrr = newMrr - churnedMrr;
 
   // Averages based on all clients started on or before this month
@@ -337,7 +338,7 @@ export function getMonthDashboardMetrics(
   }, 0);
   const avgLtv = withSpend.length > 0 ? totalLtv / withSpend.length : 0;
 
-  return { activeCount, mrr, churnedCount, churnRate, newMrr, churnedMrr, addedMrr, avgSpend, avgRetention, avgLtv };
+  return { activeCount, mrr, churnedCount, churnRate, newMrr, churnedMrr, addedMrr, avgSpend, avgRetention, avgLtv, churnedClients: churnedThisMonth, newClients };
 }
 
 // Helper used by dashboard — includes upsold flow clients as recurring (using their upsellMrr)

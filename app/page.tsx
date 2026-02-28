@@ -144,6 +144,69 @@ export default function DashboardPage() {
         />
       </div>
 
+      {/* Churned / New client breakdown */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Churned / Paused */}
+        <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">
+            Churned / Paused — {selectedLabel}
+          </h3>
+          {metrics.churnedClients.length === 0 ? (
+            <p className="text-sm text-gray-400">No churned clients this month</p>
+          ) : (
+            <ul className="divide-y divide-gray-50">
+              {metrics.churnedClients.map((c) => (
+                <li key={c.id} className="flex items-center justify-between py-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{c.name}</p>
+                    <p className="text-xs text-gray-400 capitalize">{c.status}</p>
+                  </div>
+                  <span className="text-sm font-semibold text-red-500">
+                    −{formatCurrency(c.monthlySpend)}
+                  </span>
+                </li>
+              ))}
+              <li className="flex items-center justify-between pt-3 mt-1">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total</span>
+                <span className="text-sm font-bold text-red-600">
+                  −{formatCurrency(metrics.churnedMrr)}
+                </span>
+              </li>
+            </ul>
+          )}
+        </div>
+
+        {/* New clients */}
+        <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">
+            New Clients — {selectedLabel}
+          </h3>
+          {metrics.newClients.length === 0 ? (
+            <p className="text-sm text-gray-400">No new clients this month</p>
+          ) : (
+            <ul className="divide-y divide-gray-50">
+              {metrics.newClients.map((c) => (
+                <li key={c.id} className="flex items-center justify-between py-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{c.name}</p>
+                    <p className="text-xs text-gray-400 capitalize">{c.status}</p>
+                  </div>
+                  <span className="text-sm font-semibold text-green-600">
+                    +{formatCurrency(c.monthlySpend)}
+                  </span>
+                </li>
+              ))}
+              <li className="flex items-center justify-between pt-3 mt-1">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total</span>
+                <span className="text-sm font-bold text-green-700">
+                  +{formatCurrency(metrics.newMrr)}
+                </span>
+              </li>
+            </ul>
+          )}
+        </div>
+      </div>
+
       {/* MRR Growth — full width */}
       <MRRGrowthChart clients={recurring} />
 
