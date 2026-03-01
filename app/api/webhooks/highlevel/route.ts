@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+// GHL preflight
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS });
+}
+
 // POST /api/webhooks/highlevel?secret=YOUR_SECRET
 // Expected body from GHL Workflow custom webhook:
 // { "companyName": "{{contact.company_name}}", "contactName": "{{contact.full_name}}" }
@@ -12,10 +23,20 @@ export async function POST(request: NextRequest) {
   }
 
   let body: Record<string, unknown>;
+  const contentType = request.headers.get('content-type') ?? '';
   try {
-    body = await request.json();
+    if (contentType.includes('application/json')) {
+      body = await request.json();
+    } else if (contentType.includes('application/x-www-form-urlencoded')) {
+      const text = await request.text();
+      body = Object.fromEntries(new URLSearchParams(text));
+    } else {
+      // Try JSON first, fall back to text
+      const text = await request.text();
+      try { body = JSON.parse(text); } catch { body = Object.fromEntries(new URLSearchParams(text)); }
+    }
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    return NextResponse.json({ error: 'Could not parse body' }, { status: 400 });
   }
 
   // Accept companyName (preferred) or fall back to contactName
