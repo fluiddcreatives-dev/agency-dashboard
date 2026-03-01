@@ -7,9 +7,13 @@ const CORS = {
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
-// GHL preflight
+// GHL preflight / health check
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS });
+}
+
+export async function GET() {
+  return NextResponse.json({ ok: true }, { headers: CORS });
 }
 
 // POST /api/webhooks/highlevel?secret=YOUR_SECRET
