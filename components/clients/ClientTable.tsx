@@ -351,7 +351,7 @@ export default function ClientTable({ clients, onAdd }: Props) {
                     </td>
                   )}
                   <td className="px-4 py-3 text-gray-500">
-                    {new Date(client.startDate).toLocaleDateString('en-US', {
+                    {new Date(client.startDate + 'T00:00:00').toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
                       year: 'numeric',
@@ -360,13 +360,13 @@ export default function ClientTable({ clients, onAdd }: Props) {
                   {isFlow ? (
                     <td className="px-4 py-3 text-gray-500">
                       {client.flowsLiveDate
-                        ? new Date(client.flowsLiveDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                        ? new Date(client.flowsLiveDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                         : <span className="text-gray-300">—</span>}
                     </td>
                   ) : (
                     <td className="px-4 py-3 text-gray-500">
                       {client.endDate
-                        ? new Date(client.endDate).toLocaleDateString('en-US', {
+                        ? new Date(client.endDate + 'T00:00:00').toLocaleDateString('en-US', {
                             month: 'short',
                             day: 'numeric',
                             year: 'numeric',

@@ -262,7 +262,7 @@ export default function FlowSetupsPage() {
                 <tr key={client.id} className="border-b border-gray-50 hover:bg-gray-50">
                   <td className="px-5 py-3 font-medium text-gray-900">{client.name}</td>
                   <td className="px-5 py-3 text-gray-500">
-                    {new Date(client.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {new Date(client.startDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </td>
                   <td className="px-5 py-3 text-right">
                     {client.upsellMrr
@@ -301,8 +301,8 @@ export default function FlowSetupsPage() {
               {flowClients
                 .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
                 .map((client) => {
-                  const start = new Date(client.startDate);
-                  const end = client.flowsLiveDate ? new Date(client.flowsLiveDate) : null;
+                  const start = new Date(client.startDate + 'T00:00:00');
+                  const end = client.flowsLiveDate ? new Date(client.flowsLiveDate + 'T00:00:00') : null;
                   const days = end
                     ? Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
                     : null;
@@ -340,7 +340,7 @@ export default function FlowSetupsPage() {
           {flowClients.some((c) => c.flowsLiveDate) && (() => {
             const completed = flowClients.filter((c) => c.flowsLiveDate);
             const avg = completed.reduce((sum, c) => {
-              const d = Math.round((new Date(c.flowsLiveDate!).getTime() - new Date(c.startDate).getTime()) / (1000 * 60 * 60 * 24));
+              const d = Math.round((new Date(c.flowsLiveDate! + 'T00:00:00').getTime() - new Date(c.startDate + 'T00:00:00').getTime()) / (1000 * 60 * 60 * 24));
               return sum + d;
             }, 0) / completed.length;
             return (
@@ -421,11 +421,11 @@ export default function FlowSetupsPage() {
                     <td className="px-5 py-3"><UpsellBadge upsold={client.upsold} /></td>
                     <td className="px-5 py-3"><StatusBadge client={client} /></td>
                     <td className="px-5 py-3 text-gray-500">
-                      {new Date(client.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      {new Date(client.startDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
                     <td className="px-5 py-3 text-gray-500">
                       {client.flowsLiveDate
-                        ? new Date(client.flowsLiveDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                        ? new Date(client.flowsLiveDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                         : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-5 py-3 text-right">
