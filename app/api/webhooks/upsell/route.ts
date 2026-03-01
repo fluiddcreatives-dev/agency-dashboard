@@ -72,20 +72,48 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: fetchError.message }, { status: 500, headers: CORS });
   }
 
+  // No existing flow setup client — create one already marked as upsold
   if (!matches || matches.length === 0) {
-    return NextResponse.json(
-      { error: `No flow setup client found matching "${companyName}"` },
-      { status: 404, headers: CORS }
-    );
+    const { data: inserted, error: insertError } = await supabase
+      .from('clients')
+      .insert({
+        name: companyName,
+        client_type: 'flow_setup',
+        status: 'active',
+        start_date: today,
+        monthly_spend: 0,
+        notes: '',
+        upsold: true,
+        upsell_mrr: recurringMrr,
+        upsell_date: today,
+        created_at: now,
+        updated_at: now,
+      })
+      .select('id, name')
+      .single();
+
+    if (insertError) {
+      return NextResponse.json({ error: insertError.message }, { status: 500, headers: CORS });
+    }
+
+    return NextResponse.json({
+      success: true,
+      created: true,
+      client: inserted.name,
+      upsell_date: today,
+      upsell_mrr: recurringMrr,
+    }, { headers: CORS });
   }
 
   const client = matches[0];
 
+  // Already upsold — just return success, don't error
   if (client.upsold) {
-    return NextResponse.json(
-      { error: `"${client.name}" is already marked as upsold` },
-      { status: 409, headers: CORS }
-    );
+    return NextResponse.json({
+      success: true,
+      already_upsold: true,
+      client: client.name,
+    }, { headers: CORS });
   }
 
   const { error: updateError } = await supabase
