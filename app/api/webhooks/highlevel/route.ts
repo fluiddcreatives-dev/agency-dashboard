@@ -20,12 +20,6 @@ export async function GET() {
 // Expected body from GHL Workflow custom webhook:
 // { "companyName": "{{contact.company_name}}", "contactName": "{{contact.full_name}}" }
 export async function POST(request: NextRequest) {
-  // Verify secret token
-  const secret = request.nextUrl.searchParams.get('secret');
-  if (!secret || secret !== process.env.WEBHOOK_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   let body: Record<string, unknown>;
   const contentType = request.headers.get('content-type') ?? '';
   try {
