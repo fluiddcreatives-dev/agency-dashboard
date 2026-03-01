@@ -27,10 +27,11 @@ export async function proxy(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isLoginPage = path === '/login';
+  const isApiRoute = path.startsWith('/api/');
   const isPM = user?.user_metadata?.role === 'pm';
   const isPMBlocked = isPM && path === '/';
 
-  if (!user && !isLoginPage) {
+  if (!user && !isLoginPage && !isApiRoute) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
