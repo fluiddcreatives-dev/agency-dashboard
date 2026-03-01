@@ -37,12 +37,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Could not parse body' }, { status: 400 });
   }
 
-  // Accept companyName (preferred) or fall back to contactName
-  const rawName = (body.companyName ?? body.contactName ?? '') as string;
+  // GHL sends contact data in various shapes — try all common locations
+  const contact = (body.contact ?? {}) as Record<string, unknown>;
+  const rawName = (
+    body.companyName ??
+    body.contactName ??
+    contact.companyName ??
+    contact.company_name ??
+    contact.name ??
+    body.name ??
+    body.company_name ??
+    ''
+  ) as string;
   const companyName = rawName.trim();
 
+  // Debug: return the full body if no name found (remove after debugging)
   if (!companyName) {
-    return NextResponse.json({ error: 'No company name in payload' }, { status: 400 });
+    return NextResponse.json({ error: 'No company name in payload', received: body }, { status: 400 });
   }
 
   const supabase = createServiceClient();
