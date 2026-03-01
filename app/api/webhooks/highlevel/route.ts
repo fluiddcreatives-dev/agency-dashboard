@@ -37,16 +37,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Could not parse body' }, { status: 400 });
   }
 
-  // GHL sends contact data in various shapes — try all common locations
+  // GHL nests custom data under body.customData
+  const customData = (body.customData ?? {}) as Record<string, unknown>;
   const contact = (body.contact ?? {}) as Record<string, unknown>;
   const rawName = (
+    customData.companyName ??
+    body.opportunity_name ??
     body.companyName ??
     body.contactName ??
     contact.companyName ??
     contact.company_name ??
-    contact.name ??
     body.name ??
-    body.company_name ??
     ''
   ) as string;
   const companyName = rawName.trim();
