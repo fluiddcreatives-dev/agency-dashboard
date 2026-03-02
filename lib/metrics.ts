@@ -285,11 +285,17 @@ export function getMonthDashboardMetrics(
   const todayDate = new Date();
   const currentMonth = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}`;
 
-  // Active clients: use status for current month (excludes paused), dates for history
+  // Active clients: use status for current month (excludes paused), dates for history.
+  // For historical months, a client counts toward closing MRR only if they were still
+  // active at the END of the month (endDate must be strictly after the month, not in it).
   const activeInMonth =
     month === currentMonth
       ? clients.filter((c) => c.status === 'active')
-      : clients.filter((c) => isActiveInMonth(c, month) && c.status !== 'paused');
+      : clients.filter((c) => {
+          const started = toYearMonth(c.startDate) <= month;
+          const stillActive = !c.endDate || toYearMonth(c.endDate) > month;
+          return started && stillActive && c.status !== 'paused';
+        });
   const activeCount = activeInMonth.length;
   const mrr = activeInMonth.reduce((sum, c) => sum + c.monthlySpend, 0);
   const avgSpend = activeCount > 0 ? mrr / activeCount : 0;
