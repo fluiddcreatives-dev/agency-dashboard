@@ -33,7 +33,7 @@ function clientLtv(client: Client): number {
   return effectiveSpend(client) * months;
 }
 
-type SortKey = 'monthlySpend' | 'ltv' | 'startDate';
+type SortKey = 'name' | 'monthlySpend' | 'ltv' | 'startDate';
 type SortDir = 'desc' | 'asc';
 type FlowStatusFilter = 'all' | 'in_progress' | 'flows_live' | 'upsold';
 
@@ -148,6 +148,10 @@ export default function ClientTable({ clients, onAdd }: Props) {
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => {
+      if (sortKey === 'name') {
+        const cmp = a.name.localeCompare(b.name);
+        return sortDir === 'asc' ? cmp : -cmp;
+      }
       let aVal: number;
       let bVal: number;
       if (sortKey === 'monthlySpend') {
@@ -251,7 +255,15 @@ export default function ClientTable({ clients, onAdd }: Props) {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100">
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Company</th>
+              <th className="text-left px-4 py-3">
+                <button
+                  onClick={() => handleSort('name')}
+                  className="font-medium text-gray-500 hover:text-gray-900 transition-colors"
+                >
+                  Company
+                  <SortIcon active={sortKey === 'name'} dir={sortDir} />
+                </button>
+              </th>
               {isFlow ? (
                 <>
                   <th className="text-left px-4 py-3 font-medium text-gray-500">Qualified</th>
