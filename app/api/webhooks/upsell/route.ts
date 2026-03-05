@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'recurringMrr must be a positive number' }, { status: 400, headers: CORS });
   }
 
-  const setupFee = Number(body.setupFee ?? body.setup_fee ?? 0);
+  const setupFee = Number(String(body.setupFee ?? body.setup_fee ?? '0').replace(/[^0-9.]/g, ''));
 
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
   const now = new Date().toISOString();
@@ -86,6 +86,7 @@ export async function POST(request: NextRequest) {
         start_date: today,
         monthly_spend: setupFee,
         notes: '',
+        qualified: true,
         upsold: true,
         upsell_mrr: recurringMrr,
         upsell_date: today,
@@ -122,10 +123,11 @@ export async function POST(request: NextRequest) {
   const { error: updateError } = await supabase
     .from('clients')
     .update({
+      qualified: true,
       upsold: true,
       upsell_mrr: recurringMrr,
       upsell_date: today,
-      ...(setupFee > 0 && { monthly_spend: setupFee }),
+      monthly_spend: setupFee,
       updated_at: now,
     })
     .eq('id', client.id);
