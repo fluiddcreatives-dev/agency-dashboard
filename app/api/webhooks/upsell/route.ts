@@ -17,8 +17,9 @@ export async function GET() {
 
 // POST /api/webhooks/upsell
 // Expected body from Zapier:
-// { "companyName": "Acme Corp", "recurringMrr": 3000 }
+// { "companyName": "Acme Corp", "recurringMrr": 3000, "setupFee": 1500 }
 // recurringMrr = the monthly recurring amount they sold into
+// setupFee = one-time setup fee (optional, stored as monthly_spend on the flow setup record)
 export async function POST(request: NextRequest) {
   let body: Record<string, unknown>;
   const contentType = request.headers.get('content-type') ?? '';
@@ -56,6 +57,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'recurringMrr must be a positive number' }, { status: 400, headers: CORS });
   }
 
+  const setupFee = Number(body.setupFee ?? body.setup_fee ?? 0);
+
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
   const now = new Date().toISOString();
 
@@ -81,7 +84,7 @@ export async function POST(request: NextRequest) {
         client_type: 'flow_setup',
         status: 'active',
         start_date: today,
-        monthly_spend: 0,
+        monthly_spend: setupFee,
         notes: '',
         upsold: true,
         upsell_mrr: recurringMrr,
@@ -122,6 +125,7 @@ export async function POST(request: NextRequest) {
       upsold: true,
       upsell_mrr: recurringMrr,
       upsell_date: today,
+      ...(setupFee > 0 && { monthly_spend: setupFee }),
       updated_at: now,
     })
     .eq('id', client.id);
