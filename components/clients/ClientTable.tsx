@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Client, ClientStatus, ClientType } from '@/lib/types';
-import { formatCurrency } from '@/lib/metrics';
+import { formatCurrency, computeClientLtv } from '@/lib/metrics';
 import StatusBadge from './StatusBadge';
 
 function monthsBetween(startIso: string, endIso: string): number {
@@ -28,9 +28,7 @@ function effectiveStart(client: Client): string {
 }
 
 function clientLtv(client: Client): number {
-  const end = client.endDate ?? new Date().toISOString();
-  const months = Math.max(1, monthsBetween(effectiveStart(client), end));
-  return effectiveSpend(client) * months;
+  return computeClientLtv({ ...client, startDate: effectiveStart(client) });
 }
 
 type SortKey = 'name' | 'monthlySpend' | 'ltv' | 'startDate';

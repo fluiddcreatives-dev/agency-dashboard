@@ -1,4 +1,4 @@
-import { Client } from './types';
+import { Client, MrrChange } from './types';
 import { createBrowserClient } from './supabase';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -18,6 +18,15 @@ function toClient(row: any): Client {
     upsellDate: row.upsell_date ?? undefined,
     onboardingDate: row.onboarding_date ?? undefined,
     flowsLiveDate: row.flows_live_date ?? undefined,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mrrChanges: (row.mrr_changes ?? []).map((c: any): MrrChange => ({
+      id: c.id,
+      clientId: c.client_id,
+      oldMrr: Number(c.old_mrr),
+      newMrr: Number(c.new_mrr),
+      effectiveDate: c.effective_date,
+      createdAt: c.created_at,
+    })).sort((a: MrrChange, b: MrrChange) => a.effectiveDate.localeCompare(b.effectiveDate)),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -48,10 +57,26 @@ export async function getClients(): Promise<Client[]> {
   const supabase = createBrowserClient();
   const { data, error } = await supabase
     .from('clients')
-    .select('*')
+    .select('*, mrr_changes(*)')
     .order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []).map(toClient);
+}
+
+export async function addMrrChange(
+  clientId: string,
+  oldMrr: number,
+  newMrr: number,
+  effectiveDate: string
+): Promise<void> {
+  const supabase = createBrowserClient();
+  const { error } = await supabase.from('mrr_changes').insert({
+    client_id: clientId,
+    old_mrr: oldMrr,
+    new_mrr: newMrr,
+    effective_date: effectiveDate,
+  });
+  if (error) throw error;
 }
 
 export async function addClient(client: Client): Promise<void> {

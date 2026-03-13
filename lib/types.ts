@@ -1,6 +1,15 @@
 export type ClientStatus = 'active' | 'churned' | 'paused';
 export type ClientType = 'recurring' | 'flow_setup';
 
+export interface MrrChange {
+  id: string;
+  clientId: string;
+  oldMrr: number;
+  newMrr: number;
+  effectiveDate: string;
+  createdAt: string;
+}
+
 export interface Client {
   id: string;
   name: string;
@@ -17,6 +26,7 @@ export interface Client {
   upsellDate?: string;
   onboardingDate?: string;  // when onboarding started
   flowsLiveDate?: string;   // when flows went live
+  mrrChanges?: MrrChange[];
   createdAt: string;
   updatedAt: string;
 }

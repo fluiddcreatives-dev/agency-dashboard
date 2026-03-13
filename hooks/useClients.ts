@@ -8,6 +8,7 @@ import {
   addClient as storageAdd,
   updateClient as storageUpdate,
   deleteClient as storageDelete,
+  addMrrChange as storageAddMrrChange,
 } from '@/lib/storage';
 
 function generateId(): string {
@@ -77,5 +78,15 @@ export function useClients() {
     [clients, updateClient]
   );
 
-  return { clients, loaded, addClient, updateClient, deleteClient, markChurned };
+  const addMrrChange = useCallback(
+    async (clientId: string, oldMrr: number, newMrr: number, effectiveDate: string) => {
+      await storageAddMrrChange(clientId, oldMrr, newMrr, effectiveDate);
+      // Refresh clients so mrrChanges and monthly_spend are up to date
+      const updated = await getClients();
+      setClients(updated);
+    },
+    []
+  );
+
+  return { clients, loaded, addClient, updateClient, deleteClient, markChurned, addMrrChange };
 }

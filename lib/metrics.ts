@@ -1,4 +1,4 @@
-import { Client, ClientType, Metrics } from './types';
+import { Client, ClientType, Metrics, MrrChange } from './types';
 
 function isRecurring(c: Client): boolean {
   return !c.clientType || c.clientType === 'recurring';
@@ -130,6 +130,40 @@ export function getMonthlyNRR(clients: Client[]): NRRPoint[] {
   }
 
   return result;
+}
+
+export function computeClientLtv(client: Client): number {
+  const today = new Date().toISOString().slice(0, 10);
+  const endDate = client.endDate ?? today;
+  const changes: MrrChange[] = [...(client.mrrChanges ?? [])].sort((a, b) =>
+    a.effectiveDate.localeCompare(b.effectiveDate)
+  );
+
+  if (changes.length === 0) {
+    const months = Math.max(1, monthsBetween(client.startDate, endDate));
+    return client.monthlySpend * months;
+  }
+
+  let ltv = 0;
+  let periodStart = client.startDate;
+  let periodMrr = changes[0].oldMrr;
+
+  for (const change of changes) {
+    if (change.effectiveDate > periodStart && periodStart < endDate) {
+      const periodEnd = change.effectiveDate < endDate ? change.effectiveDate : endDate;
+      const months = Math.max(0, monthsBetween(periodStart, periodEnd));
+      ltv += periodMrr * months;
+    }
+    periodStart = change.effectiveDate;
+    periodMrr = change.newMrr;
+  }
+
+  if (periodStart < endDate) {
+    const months = Math.max(1, monthsBetween(periodStart, endDate));
+    ltv += periodMrr * months;
+  }
+
+  return ltv;
 }
 
 function monthsBetween(startIso: string, endIso: string): number {
@@ -268,9 +302,11 @@ export interface MonthDashboardMetrics {
   mrr: number;
   churnedCount: number;
   churnRate: number;   // %
-  newMrr: number;     // MRR added from new clients this month
-  churnedMrr: number; // MRR lost from churned clients this month
-  addedMrr: number;   // newMrr - churnedMrr
+  newMrr: number;      // MRR added from new clients this month
+  churnedMrr: number;  // MRR lost from churned clients this month
+  expansionMrr: number;   // MRR gained from upgrades
+  contractionMrr: number; // MRR lost from downgrades
+  addedMrr: number;   // newMrr + expansionMrr - contractionMrr - churnedMrr
   avgSpend: number;
   avgRetention: number;
   avgLtv: number;
@@ -323,7 +359,18 @@ export function getMonthDashboardMetrics(
   // New clients started this month
   const newClients = clients.filter((c) => toYearMonth(c.startDate) === month);
   const newMrr = newClients.reduce((sum, c) => sum + c.monthlySpend, 0);
-  const addedMrr = newMrr - churnedMrr;
+
+  // Expansion / contraction from MRR changes recorded this month
+  const allChanges = clients.flatMap((c) => c.mrrChanges ?? []);
+  const changesThisMonth = allChanges.filter((ch) => toYearMonth(ch.effectiveDate) === month);
+  const expansionMrr = changesThisMonth
+    .filter((ch) => ch.newMrr > ch.oldMrr)
+    .reduce((sum, ch) => sum + (ch.newMrr - ch.oldMrr), 0);
+  const contractionMrr = changesThisMonth
+    .filter((ch) => ch.newMrr < ch.oldMrr)
+    .reduce((sum, ch) => sum + (ch.oldMrr - ch.newMrr), 0);
+
+  const addedMrr = newMrr + expansionMrr - contractionMrr - churnedMrr;
 
   // Averages based on all clients started on or before this month
   const today = new Date().toISOString();
@@ -344,7 +391,7 @@ export function getMonthDashboardMetrics(
   }, 0);
   const avgLtv = withSpend.length > 0 ? totalLtv / withSpend.length : 0;
 
-  return { activeCount, mrr, churnedCount, churnRate, newMrr, churnedMrr, addedMrr, avgSpend, avgRetention, avgLtv, churnedClients: churnedThisMonth, newClients };
+  return { activeCount, mrr, churnedCount, churnRate, newMrr, churnedMrr, expansionMrr, contractionMrr, addedMrr, avgSpend, avgRetention, avgLtv, churnedClients: churnedThisMonth, newClients };
 }
 
 // Helper used by dashboard — includes upsold flow clients as recurring (using their upsellMrr)
