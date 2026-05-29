@@ -22,7 +22,6 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const { id } = use(params);
   const router = useRouter();
   const { clients, loaded, updateClient, deleteClient, markChurned, addMrrChange } = useClients();
-  const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showMrrForm, setShowMrrForm] = useState(false);
   const [newMrr, setNewMrr] = useState('');
@@ -66,7 +65,6 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       createdAt: client!.createdAt,
       updatedAt: new Date().toISOString(),
     });
-    setEditing(false);
   }
 
   function handleDelete() {
@@ -104,12 +102,6 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
               Mark Churned
             </button>
           )}
-          <button
-            onClick={() => setEditing(true)}
-            className="px-3 py-1.5 text-sm font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
-          >
-            Edit
-          </button>
           {!confirmDelete ? (
             <button
               onClick={() => setConfirmDelete(true)}
@@ -133,6 +125,9 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           )}
         </div>
       </div>
+
+      {/* Inline edit form */}
+      <ClientForm client={client} inline onSave={handleSave} onCancel={() => {}} />
 
       {/* Metrics */}
       {client.clientType === 'flow_setup' ? (
@@ -305,19 +300,6 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         </div>
       )}
 
-      {/* Notes */}
-      <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">Notes</h2>
-        {client.notes ? (
-          <p className="text-sm text-gray-700 whitespace-pre-wrap">{client.notes}</p>
-        ) : (
-          <p className="text-sm text-gray-400 italic">No notes yet. Click Edit to add some.</p>
-        )}
-      </div>
-
-      {editing && (
-        <ClientForm client={client} onSave={handleSave} onCancel={() => setEditing(false)} />
-      )}
     </div>
   );
 }
