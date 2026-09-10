@@ -1,7 +1,7 @@
 import { Client, ClientType, Metrics, MrrChange } from './types';
 
 function isRecurring(c: Client): boolean {
-  return !c.clientType || c.clientType === 'recurring';
+  return !c.clientType || c.clientType === 'recurring' || c.clientType === 'ai';
 }
 
 function toYearMonth(isoDate: string): string {

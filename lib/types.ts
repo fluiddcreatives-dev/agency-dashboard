@@ -1,5 +1,5 @@
 export type ClientStatus = 'active' | 'churned' | 'paused';
-export type ClientType = 'recurring' | 'flow_setup';
+export type ClientType = 'recurring' | 'ai' | 'flow_setup';
 
 export interface MrrChange {
   id: string;

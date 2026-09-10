@@ -112,12 +112,23 @@ export default function ClientForm({ client, initialClientType, inline, onSave, 
             type="button"
             onClick={() => set('clientType', 'recurring')}
             className={`flex-1 py-2 text-sm font-medium transition-colors ${
-              !isFlowSetup
+              form.clientType === 'recurring'
                 ? 'bg-indigo-600 text-white'
                 : 'text-gray-600 hover:bg-gray-50'
             }`}
           >
-            Recurring Client
+            Email Client
+          </button>
+          <button
+            type="button"
+            onClick={() => set('clientType', 'ai')}
+            className={`flex-1 py-2 text-sm font-medium transition-colors border-l border-gray-200 ${
+              form.clientType === 'ai'
+                ? 'bg-indigo-600 text-white'
+                : 'text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            AI Client
           </button>
           <button
             type="button"

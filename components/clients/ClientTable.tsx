@@ -166,6 +166,7 @@ export default function ClientTable({ clients, onAdd }: Props) {
     });
 
   const recurringCount = clients.filter((c) => !c.clientType || c.clientType === 'recurring').length;
+  const aiCount = clients.filter((c) => c.clientType === 'ai').length;
   const flowCount = clients.filter((c) => c.clientType === 'flow_setup').length;
 
   return (
@@ -175,14 +176,27 @@ export default function ClientTable({ clients, onAdd }: Props) {
         <button
           onClick={() => setTypeFilter('recurring')}
           className={`px-4 py-1.5 text-sm rounded-lg font-medium transition-colors ${
-            !isFlow
+            typeFilter === 'recurring'
               ? 'bg-indigo-600 text-white'
               : 'bg-white text-gray-600 border border-gray-200 hover:border-indigo-400'
           }`}
         >
-          Recurring Clients
-          <span className={`ml-1.5 text-xs rounded-full px-1.5 py-0.5 ${!isFlow ? 'bg-indigo-500 text-indigo-100' : 'bg-gray-100 text-gray-500'}`}>
+          Email | Active Clients
+          <span className={`ml-1.5 text-xs rounded-full px-1.5 py-0.5 ${typeFilter === 'recurring' ? 'bg-indigo-500 text-indigo-100' : 'bg-gray-100 text-gray-500'}`}>
             {recurringCount}
+          </span>
+        </button>
+        <button
+          onClick={() => setTypeFilter('ai')}
+          className={`px-4 py-1.5 text-sm rounded-lg font-medium transition-colors ${
+            typeFilter === 'ai'
+              ? 'bg-indigo-600 text-white'
+              : 'bg-white text-gray-600 border border-gray-200 hover:border-indigo-400'
+          }`}
+        >
+          AI | Active Clients
+          <span className={`ml-1.5 text-xs rounded-full px-1.5 py-0.5 ${typeFilter === 'ai' ? 'bg-indigo-500 text-indigo-100' : 'bg-gray-100 text-gray-500'}`}>
+            {aiCount}
           </span>
         </button>
         <button
